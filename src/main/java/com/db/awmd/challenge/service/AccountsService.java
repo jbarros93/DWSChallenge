@@ -25,13 +25,14 @@ public class AccountsService {
 
     @Getter
     private final AccountsRepository accountsRepository;
-    
-    @Getter final NotificationService notificationService;
+
+    @Getter
+    private final NotificationService notificationService;
 
     @Autowired
-    public AccountsService(AccountsRepository accountsRepository) {
+    public AccountsService(AccountsRepository accountsRepository, NotificationService notificationService) {
         this.accountsRepository = accountsRepository;
-        notificationService = null;
+        this.notificationService = notificationService;
     }
 
     public void createAccount(Account account) {
@@ -50,12 +51,17 @@ public class AccountsService {
 
         isValidTransfer(fromAccount, toAccount, newTransfer);
 
-        Object lock1 = newTransfer.getAccountFromId();
-        Object lock2 = newTransfer.getAccountToId();
+        Account lock1 = fromAccount;
+        Account lock2 = toAccount;
 
         synchronized (lock1){
           synchronized (lock2){
               log.info("New thread");
+
+              if(!hasEnoughBalance(fromAccount, newTransfer)){
+                  throw new InsufficientBalanceException("The source account does not have enough balance to make this transfer");
+              }
+
               updateAccountsAndNotify(fromAccount, toAccount, newTransfer.getTransferAmount());
           }
         }
@@ -65,7 +71,7 @@ public class AccountsService {
 
     private void updateAccountsAndNotify(Account fromAccount, Account toAccount, BigDecimal amount) {
         fromAccount.setBalance(fromAccount.getBalance().subtract(amount));
-        toAccount.setBalance(toAccount.getBalance().subtract(amount));
+        toAccount.setBalance(toAccount.getBalance().add(amount));
 
         List<Account> accountsToUpdate = new ArrayList<>();
         accountsToUpdate.add(fromAccount);
@@ -77,7 +83,7 @@ public class AccountsService {
     }
 
     public void isValidTransfer(Account fromAccount, Account toAccount, Transfer newTransfer)
-            throws AccountNotFoundException, SameAccountException, InsufficientBalanceException, TransferNegativeAmountException {
+            throws AccountNotFoundException, SameAccountException, TransferNegativeAmountException {
 
         if (Objects.isNull(fromAccount)) {
             throw new AccountNotFoundException("The account from where the transfer should be made was not found");
@@ -94,10 +100,12 @@ public class AccountsService {
         if (newTransfer.getTransferAmount().signum() <= 0) {
             throw new TransferNegativeAmountException("The transfer amount must be greater than 0");
         }
+    }
 
-        //check if the source account has enough money to make the transfer
-        if (fromAccount.getBalance().subtract(newTransfer.getTransferAmount()).signum() <= 0) {
-            throw new InsufficientBalanceException("The source account does not have enough balance to make this transfer");
-        }
+    //check if the source account has enough money to make the transfer
+    public boolean hasEnoughBalance(Account fromAccount, Transfer newTransfer){
+
+        return (fromAccount.getBalance().subtract(newTransfer.getTransferAmount()).signum() >= 0);
     }
 }
+

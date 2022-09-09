@@ -1,8 +1,11 @@
 package com.db.awmd.challenge.service;
 
+import org.springframework.stereotype.Service;
+
 import com.db.awmd.challenge.domain.Account;
 import lombok.extern.slf4j.Slf4j;
 
+@Service
 @Slf4j
 public class EmailNotificationService implements NotificationService {
 

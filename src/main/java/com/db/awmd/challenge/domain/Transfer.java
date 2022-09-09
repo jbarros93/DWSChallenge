@@ -18,7 +18,6 @@ public class Transfer {
     private final String accountToId;
 
     @NotNull
-    @NotEmpty
     private final BigDecimal transferAmount;
 
     @JsonCreator
