@@ -54,6 +54,11 @@ public class AccountsService {
         Account lock1 = fromAccount;
         Account lock2 = toAccount;
 
+        if(fromAccount.getAccountId().compareTo(toAccount.getAccountId()) < 0){
+            lock1 = toAccount;
+            lock2 = fromAccount;
+        }
+
         synchronized (lock1){
           synchronized (lock2){
               log.info("New thread");
